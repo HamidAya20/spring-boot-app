@@ -1,39 +1,32 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = "springboot-demo"
+        HOST_PORT = "8081"
+        CONTAINER_PORT = "8081"
+    }
+
     stages {
-        stage('Checkout') {
-            steps {
-                git 'https://github.com/user/springboot-app.git'
-            }
-        }
 
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                bat 'mvn clean package -DskipTests'
             }
         }
 
         stage('Docker Build') {
             steps {
-                sh 'docker build -t springboot-app .'
+                bat 'docker build -t %IMAGE_NAME% .'
             }
         }
 
         stage('Deploy') {
             steps {
-                sh 'docker-compose down || true'
-                sh 'docker-compose up -d'
+                bat 'docker stop %IMAGE_NAME% || exit 0'
+                bat 'docker rm %IMAGE_NAME% || exit 0'
+                bat 'docker run -d -p %HOST_PORT%:%CONTAINER_PORT% --name %IMAGE_NAME% %IMAGE_NAME%'
             }
-        }
-    }
-
-    post {
-        success {
-            echo 'Pipeline CI/CD exécuté avec succès '
-        }
-        failure {
-            echo 'Erreur dans le pipeline '
         }
     }
 }
