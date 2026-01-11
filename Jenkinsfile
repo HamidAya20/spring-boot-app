@@ -1,34 +1,40 @@
+
 pipeline {
-    agent any
-  tools {
-         maven 'Maven3'
-     }
-    environment {
-        IMAGE_NAME = "springboot-demo"
-        HOST_PORT = "8081"
-        CONTAINER_PORT = "8081"
+  agent any
+
+  stages {
+
+    stage('Build') {
+      steps {
+        sh 'mvn clean package'
+      }
     }
 
-    stages {
-
-        stage('Build') {
-            steps {
-                bat 'mvn clean package -DskipTests'
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                bat 'docker build -t %IMAGE_NAME% .'
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                bat 'docker stop %IMAGE_NAME% || exit 0'
-                bat 'docker rm %IMAGE_NAME% || exit 0'
-                bat 'docker run -d -p %HOST_PORT%:%CONTAINER_PORT% --name %IMAGE_NAME% %IMAGE_NAME%'
-            }
-        }
+    stage('Test') {
+      steps {
+        sh 'mvn test'
+      }
     }
+
+    stage('Build Docker Image') {
+      steps {
+        sh 'docker build -t ahamid671/springboot-demo:latest .'
+      }
+    }
+
+    stage('Push Docker Image') {
+      steps {
+        sh 'docker push ahamid671/springboot-demo:latest'
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      steps {
+        sh '''
+          kubectl apply -f kubernetes/deployment.yaml
+          kubectl apply -f kubernetes/service.yaml
+        '''
+      }
+    }
+  }
 }
